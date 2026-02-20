@@ -1,4 +1,10 @@
-# Uart 
+# Serial Communication
+
+Data is transmitted one bit at a time over one or more lines.
+
+
+
+## Uart 
 
 ```
 START  DATA (LSB → MSB)   STOP
@@ -21,7 +27,22 @@ Next tick → line might change for next bit
 ```
 
 
+
+## SPI
+
+
+
+
+
+## I2C
+
 ## TODO
+
+introduce glitch
+hide baud rate
+connect mid transmission
+
+
 
 write receiver
 ```

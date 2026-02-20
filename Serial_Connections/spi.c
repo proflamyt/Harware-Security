@@ -8,7 +8,26 @@
 #include <stdlib.h>
 #include <pty.h>
 
-int sclk, mosi, miso, cs = 1;
+int sclk, mosi, tx_line, miso, cs = 0;
+#define BAUD 9600
+
+enum {
+    TX_IDLE,
+    TX_START,
+    TX_DATA,
+    TX_PARITY,
+    TX_STOP
+};
+
+volatile sig_atomic_t tx_line = 1;   // idle = HIGH
+
+const uint8_t msg[] = "flag";
+
+int tx_state = TX_IDLE;
+uint8_t tx_byte = 0;
+int parity = 0;
+int bit_pos = 0;
+int msg_pos = 0;
 
 
 sclk = 0; // every change to 5 volt 
@@ -18,16 +37,33 @@ void start_transfer() {
 
 
 void clock_handler(int sig) {
+    if (!cs) return;
     sclk = !sclk;
     if (sclk) trigger_data();
 
 }
 
+void sigpwr_handler(int signo)
+{
+    if (signo == SIGPWR)
+    {
+        cs = 1;
+    }
+}
+
+static int even_parity(uint8_t b) {
+    int p = 0;
+    while (b) {
+        p ^= 1;
+        b &= b - 1;
+    }
+    return p;
+}
+
 
 void trigger_data() {
     // On a defined clock edge, the shift register updates MOSI.
-    (void)sig;
-
+ 
     switch (tx_state) {
 
         case TX_IDLE:
@@ -68,6 +104,17 @@ int main() {
 
     struct sigaction sa_timer;
     struct itimerval timer;
+    struct sigaction sa;
+
+    sa.sa_handler = sigpwr_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    if (sigaction(SIGPWR, &sa, NULL) == -1)
+    {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
 
     memset(&sa_timer, 0, sizeof(sa_timer));
     sa_timer.sa_handler = clock_handler;
@@ -85,9 +132,11 @@ int main() {
     setitimer(ITIMER_REAL, &timer, NULL);
 
     while (1) {
-        char c = tx_line ? '1' : '0';
+        char d = tx_line ? '1' : '0';
+        char c = sclk ? '1' : '0';
         write(1, &c, 1);
-        //usleep(bit_us);   // pacing output
+        write(1, &d, 1);
+        //usleep(bit_us);   // pacing output, 
         usleep(1000000);
     }
 
