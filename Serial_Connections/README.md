@@ -36,6 +36,10 @@ Next tick → line might change for next bit
 
 ## I2C
 
+In I²C, the R/W bit is only sent as part of the address byte — right after the START (or Repeated START).
+
+After that, the direction is fixed for the rest of that transaction.
+
 ## TODO
 
 introduce glitch
